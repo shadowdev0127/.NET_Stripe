@@ -1,0 +1,94 @@
+﻿@using System
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using frontend.Models
+@using Microsoft.Extensions.Configuration.Json
+@using System.Text.Json;
+@inject HttpClient Http
+
+
+@page "/"
+
+<PageTitle>Index</PageTitle>
+
+<h1>Welcome to stripe API</h1>
+
+<div class="row">
+    <div class="col">
+        <input type="text" @bind="NameValue" class="form-control" placeholder="Input Name" />
+    </div>
+    <div class="col">
+        <input type="email" @bind="EmailValue" id="email" class="form-control" placeholder="Input Email" />
+    </div>
+    <div class="col">
+        <input type="number" @bind="DaysValue" id="daysUntilDue" class="form-control" placeholder="Input Days" />
+    </div>
+    <div class="col">
+        <input type="number" @bind="AmoutValue" id="amount" class="form-control" placeholder="Input Amount" />
+    </div>
+    <div class="col">
+        <select class="form-select" @onchange="onSelect" aria-label="Default select example">
+            <option value="usd" selected>usd</option>
+            <option value="usd" selected>usd</option>
+        </select>
+    </div>
+    <div class="col">
+        <button class="btn btn-primary" @onclick="SendInvoice">Send Invoice</button>
+    </div>
+    <a href=@PublicUrl class="btn btn-primary mx-auto @hiddenState" style="width:200px" role="button">Confirm Invoice</a>
+</div>
+
+@code {
+
+    private string NameValue { get; set; }
+
+    private string EmailValue { get; set; }
+
+    private long DaysValue { get; set; }
+
+    private long AmoutValue { get; set; }
+
+    private string CurrencyValue { get; set; }
+
+    private string PublicUrl = "";
+
+    private string hiddenState = "invisible";
+
+    public class JsonData
+    {
+        public string customerId { get; set; }
+
+        public string invoiceURL { get; set; }
+    }
+
+    public void onSelect(ChangeEventArgs e)
+    {
+        CurrencyValue = e.Value.ToString();
+    }
+
+    public async void SendInvoice()
+    {
+
+        StripePrice price = new StripePrice(AmoutValue, CurrencyValue);
+        Invoice data = new Invoice(NameValue, EmailValue, DaysValue, price);
+
+        var response = await Http.PostAsJsonAsync("http://localhost:7107/api/Stripe/invoice/add", data);
+
+        string url = "";
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Get the response
+            var customerJsonString = await response.Content.ReadAsStringAsync();
+            JsonData? jsonData = JsonSerializer.Deserialize<JsonData>(customerJsonString);
+            url = jsonData?.invoiceURL;
+
+            hiddenState = "visible";
+            PublicUrl = url;
+            StateHasChanged();
+        }
+      
+    }
+}
+
